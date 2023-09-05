@@ -30,7 +30,7 @@ ENV_LIST=["merge", "highway", "racetrack", "roundabout", "intersection",]
 
 
 class AirsimClient(fl.client.NumPyClient):
-    def __init__(self, Fed_target = True, shuffle_Q = True, alpha_meta = False):
+    def __init__(self):
         
         assert args.environment in ENV_LIST, "Wrong my-ENV"
         assert args.render_mode in "hr", "Wrong render mode"
@@ -62,6 +62,7 @@ class AirsimClient(fl.client.NumPyClient):
         time_str = Ptime()
         time_str.set_time_now()
         self.log_name = time_str.get_time() + f"_{args.log_name}"
+        self.n_round = int(0)
         
         
     def get_parameters(self, config):
@@ -81,7 +82,7 @@ class AirsimClient(fl.client.NumPyClient):
         print(f"Training learning rate: {self.model.learning_rate}")
         # Train the agent
         self.model.learn(total_timesteps=int(5e5),
-                         tb_log_name=self.tensorboard_log + self.log_name + f"/SAC_airsim_car_round_{self.n_round}",
+                         tb_log_name=self.tensorboard_log + self.log_name + f"/round_{self.n_round}",
                          reset_num_timesteps=False,
                          )
         print("log name: ", self.tensorboard_log + self.log_name)
@@ -99,7 +100,7 @@ class AirsimClient(fl.client.NumPyClient):
 def main():        
     # Start Flower client
     fl.client.start_numpy_client(
-        server_address="192.168.1.187:8080",
+        server_address="192.168.1.85:8080",
         client=AirsimClient(),
     )
 if __name__ == "__main__":

@@ -16,18 +16,15 @@ args = parser.parse_args()
 def main():
     total_rounds = 40
     # Decorated strategy
-    strategy = tensorboard("Server_log")(FedAvg)(min_fit_clients=2,
-                                                min_evaluate_clients=2,
-                                                min_available_clients=2,
-                                                eta = 0.0005,
-                                                eta_l = 0.0003,
-                                                total_rounds = total_rounds,
-                                                model_path = args.model_name)
+    strategy = FedAvg(min_fit_clients=2,
+                      min_evaluate_clients=2,
+                      min_available_clients=2,
+                      )
 
                
     # Start Flower server
     fl.server.start_server(
-        server_address="192.168.1.187:8080",
+        server_address="192.168.1.85:8080",
         config=fl.server.ServerConfig(num_rounds=total_rounds),
         strategy=strategy,
     )
