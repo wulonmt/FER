@@ -81,8 +81,8 @@ class AirsimClient(fl.client.NumPyClient):
             self.model.learning_rate = config["learning_rate"]
         print(f"Training learning rate: {self.model.learning_rate}")
         # Train the agent
-        self.model.learn(total_timesteps=int(5e5),
-                         tb_log_name=self.tensorboard_log + self.log_name + f"/round_{self.n_round}",
+        self.model.learn(total_timesteps=int(2.5e4),
+                         tb_log_name=self.log_name + f"/round_{self.n_round}",
                          reset_num_timesteps=False,
                          )
         print("log name: ", self.tensorboard_log + self.log_name)
