@@ -29,7 +29,7 @@ args = parser.parse_args()
 ENV_LIST=["merge", "highway", "racetrack", "roundabout", "intersection",]
 
 
-class AirsimClient(fl.client.NumPyClient):
+class HighwayClient(fl.client.NumPyClient):
     def __init__(self):
         
         assert args.environment in ENV_LIST, "Wrong my-ENV"
@@ -54,11 +54,11 @@ class AirsimClient(fl.client.NumPyClient):
                     learning_rate=5e-4,
                     gamma=0.8,
                     verbose=1,
-                    target_kl=0.2,
-                    ent_coef=0.03,
+                    target_kl=0.1,
+                    ent_coef=0.01,
                     vf_coef=0.8,
                     tensorboard_log=self.tensorboard_log,
-                    use_advantage = False)
+                    use_advantage = True)
         time_str = Ptime()
         time_str.set_time_now()
         self.log_name = time_str.get_time() + f"_{args.log_name}"
@@ -82,7 +82,7 @@ class AirsimClient(fl.client.NumPyClient):
         print(f"Training learning rate: {self.model.learning_rate}")
         # Train the agent
         self.model.learn(total_timesteps=int(2.5e4),
-                         tb_log_name=self.log_name + f"/round_{self.n_round}",
+                         tb_log_name=self.log_name + f"/round_{self.n_round}" if self.n_round>9 else self.log_name + f"/round_0{self.n_round}",
                          reset_num_timesteps=False,
                          )
         print("log name: ", self.tensorboard_log + self.log_name)
@@ -101,7 +101,7 @@ def main():
     # Start Flower client
     fl.client.start_numpy_client(
         server_address="192.168.1.85:8080",
-        client=AirsimClient(),
+        client=HighwayClient(),
     )
 if __name__ == "__main__":
     main()
