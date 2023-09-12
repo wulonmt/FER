@@ -45,7 +45,7 @@ class HighwayClient(fl.client.NumPyClient):
         #trained_env = make_vec_env(self.env, n_envs=n_cpu, vec_env_cls=SubprocVecEnv)
         #trained_env = make_vec_env(self.env, n_envs=n_cpu,)
         #env = gym.make("highway-fast-v0", render_mode="human")
-        self.model = CustomPPO("CnnPolicy",
+        self.model = CustomPPO("CustomPolicy",
                     trained_env,
                     policy_kwargs=dict(net_arch=dict(pi=[256, 256], vf=[256, 256])),
                     n_steps=batch_size * 16 // n_cpu,

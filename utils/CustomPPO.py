@@ -9,8 +9,10 @@ from torch.nn import functional as F
 from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
 from stable_baselines3.common.policies import ActorCriticCnnPolicy, ActorCriticPolicy, BasePolicy, MultiInputActorCriticPolicy
 from stable_baselines3.common.type_aliases import GymEnv, MaybeCallback, Schedule
-from stable_baselines3.common.utils import explained_variance, get_schedule_fn
+from stable_baselines3.common.utils import explained_variance, get_schedule_fn, polyak_update
 from stable_baselines3 import PPO
+
+from utils.CustomPolicy import CustomCnnPolicy
 
 SelfPPO = TypeVar("SelfPPO", bound="PPO")
 
@@ -20,6 +22,7 @@ class CustomPPO(PPO):
         "MlpPolicy": ActorCriticPolicy,
         "CnnPolicy": ActorCriticCnnPolicy,
         "MultiInputPolicy": MultiInputActorCriticPolicy,
+        "CustomPolicy": CustomCnnPolicy,
     }
 
     def __init__(
@@ -49,6 +52,8 @@ class CustomPPO(PPO):
         device: Union[th.device, str] = "auto",
         _init_setup_model: bool = True,
         use_advantage: bool = True,
+        tau: float = 0.005, #soft update for regulized model
+        regul_update_interval: int = 1,
     ):
         super().__init__(
             policy=policy,
@@ -77,6 +82,8 @@ class CustomPPO(PPO):
             _init_setup_model=_init_setup_model,            
         )
         self.use_advantage = use_advantage
+        self.tau = tau
+        self.regul_update_interval = regul_update_interval
         
     def train(self) -> None:
         """
@@ -181,7 +188,11 @@ class CustomPPO(PPO):
                 # Clip grad norm
                 th.nn.utils.clip_grad_norm_(self.policy.parameters(), self.max_grad_norm)
                 self.policy.optimizer.step()
-
+                
+            # Update regul net
+            if epoch % self.regul_update_interval == 0:
+                polyak_update(self.actor_net.parameters(), self.regul_actor_net.parameters(), self.tau)
+                
             self._n_updates += 1
             if not continue_training:
                 break
