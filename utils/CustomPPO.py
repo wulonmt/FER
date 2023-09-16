@@ -189,7 +189,9 @@ class CustomPPO(PPO):
                 approx_kl_div = th.mean((th.exp(log_ratio) - 1) - log_ratio)
                 approx_kl_divs.append(approx_kl_div.detach().cpu().numpy())
                 
-                loss += self.kl_coef * approx_kl_div
+                #Cut the kl_div if larger than kl_target
+                if self.target_kl is not None and approx_kl_div < self.target_kl:
+                    loss += self.kl_coef * approx_kl_div
 
                 if self.target_kl is not None and approx_kl_div > 1.5 * self.target_kl:
                     continue_training = False
