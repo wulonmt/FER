@@ -45,7 +45,7 @@ class HighwayClient(fl.client.NumPyClient):
         #trained_env = make_vec_env(self.env, n_envs=n_cpu, vec_env_cls=SubprocVecEnv)
         #trained_env = make_vec_env(self.env, n_envs=n_cpu,)
         #env = gym.make("highway-fast-v0", render_mode="human")
-        self.model = CustomPPO("CustomPolicy",
+        self.model = CustomPPO("CnnPolicy",
                     trained_env,
                     policy_kwargs=dict(net_arch=dict(pi=[256, 256], vf=[256, 256])),
                     n_steps=batch_size * 16 // n_cpu,
@@ -56,9 +56,12 @@ class HighwayClient(fl.client.NumPyClient):
                     verbose=1,
                     target_kl=0.1,
                     ent_coef=0.01,
+                    kl_coef=0.01,
                     vf_coef=0.8,
                     tensorboard_log=self.tensorboard_log,
-                    use_advantage = True)
+                    use_advantage = True,
+                    tau = 0.005,
+                    )
         time_str = Ptime()
         time_str.set_time_now()
         self.log_name = time_str.get_time() + f"_{args.log_name}"
@@ -73,6 +76,7 @@ class HighwayClient(fl.client.NumPyClient):
         params_dict = zip(self.model.policy.state_dict().keys(), parameters)
         state_dict = OrderedDict({k: th.tensor(v) for k, v in params_dict})
         self.model.policy.load_state_dict(state_dict, strict=True)
+        self.model.regul_policy.load_state_dict(state_dict, strict=True)
 
     def fit(self, parameters, config):
         self.n_round += 1
@@ -100,7 +104,7 @@ class HighwayClient(fl.client.NumPyClient):
 def main():        
     # Start Flower client
     fl.client.start_numpy_client(
-        server_address="192.168.1.85:8080",
+        server_address="127.0.0.1:8080",
         client=HighwayClient(),
     )
 if __name__ == "__main__":

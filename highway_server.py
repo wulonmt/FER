@@ -14,7 +14,7 @@ parser.add_argument("-m", "--model_name", help="modified model name", type=str, 
 args = parser.parse_args()
 
 def main():
-    total_rounds = 40
+    total_rounds = 20
     # Decorated strategy
     strategy = FedAvg(min_fit_clients=1,
                       min_evaluate_clients=1,

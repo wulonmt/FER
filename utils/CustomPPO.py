@@ -5,14 +5,16 @@ import numpy as np
 import torch as th
 from gymnasium import spaces
 from torch.nn import functional as F
+from copy import deepcopy
 
 from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
 from stable_baselines3.common.policies import ActorCriticCnnPolicy, ActorCriticPolicy, BasePolicy, MultiInputActorCriticPolicy
 from stable_baselines3.common.type_aliases import GymEnv, MaybeCallback, Schedule
-from stable_baselines3.common.utils import explained_variance, get_schedule_fn, polyak_update
+from stable_baselines3.common.utils import explained_variance, get_schedule_fn, polyak_update, obs_as_tensor
 from stable_baselines3 import PPO
-
-from utils.CustomPolicy import CustomCnnPolicy
+from stable_baselines3.common.vec_env import VecEnv
+from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.buffers import DictRolloutBuffer, RolloutBuffer
 
 SelfPPO = TypeVar("SelfPPO", bound="PPO")
 
@@ -22,7 +24,6 @@ class CustomPPO(PPO):
         "MlpPolicy": ActorCriticPolicy,
         "CnnPolicy": ActorCriticCnnPolicy,
         "MultiInputPolicy": MultiInputActorCriticPolicy,
-        "CustomPolicy": CustomCnnPolicy,
     }
 
     def __init__(
@@ -54,6 +55,7 @@ class CustomPPO(PPO):
         use_advantage: bool = True,
         tau: float = 0.005, #soft update for regulized model
         regul_update_interval: int = 1,
+        kl_coef: float = 0.0,
     ):
         super().__init__(
             policy=policy,
@@ -84,6 +86,9 @@ class CustomPPO(PPO):
         self.use_advantage = use_advantage
         self.tau = tau
         self.regul_update_interval = regul_update_interval
+        self.regul_policy = deepcopy(self.policy)
+        self.regul_policy.set_training_mode(False)
+        self.kl_coef = kl_coef
         
     def train(self) -> None:
         """
@@ -102,6 +107,7 @@ class CustomPPO(PPO):
         entropy_losses = []
         pg_losses, value_losses = [], []
         clip_fractions = []
+        old_entropy = []
 
         continue_training = True
         # train for n_epochs epochs
@@ -119,6 +125,10 @@ class CustomPPO(PPO):
                     self.policy.reset_noise(self.batch_size)
 
                 values, log_prob, entropy = self.policy.evaluate_actions(rollout_data.observations, actions)
+                _, regul_log_prob, regul_entropy = self.regul_policy.evaluate_actions(rollout_data.observations, actions)
+                #print("policy training? ", self.policy.training)
+                #print("regul training? ", self.regul_policy.training)
+                old_entropy.append(th.mean(regul_entropy).item())
                 values = values.flatten()
                 #use advantages or returns
                 gradient_coefs = rollout_data.advantages if self.use_advantage else rollout_data.returns
@@ -171,10 +181,15 @@ class CustomPPO(PPO):
                 # see issue #417: https://github.com/DLR-RM/stable-baselines3/issues/417
                 # and discussion in PR #419: https://github.com/DLR-RM/stable-baselines3/pull/419
                 # and Schulman blog: http://joschu.net/blog/kl-approx.html
-                with th.no_grad():
-                    log_ratio = log_prob - rollout_data.old_log_prob
-                    approx_kl_div = th.mean((th.exp(log_ratio) - 1) - log_ratio).cpu().numpy()
-                    approx_kl_divs.append(approx_kl_div)
+                #with th.no_grad():
+                #    log_ratio = log_prob - regul_log_prob
+                #    approx_kl_div = th.mean((th.exp(log_ratio) - 1) - log_ratio).cpu().numpy()
+                #    approx_kl_divs.append(approx_kl_div)
+                log_ratio = log_prob - regul_log_prob
+                approx_kl_div = th.mean((th.exp(log_ratio) - 1) - log_ratio)
+                approx_kl_divs.append(approx_kl_div.detach().cpu().numpy())
+                
+                loss += self.kl_coef * approx_kl_div
 
                 if self.target_kl is not None and approx_kl_div > 1.5 * self.target_kl:
                     continue_training = False
@@ -191,7 +206,7 @@ class CustomPPO(PPO):
                 
             # Update regul net
             if epoch % self.regul_update_interval == 0:
-                polyak_update(self.actor_net.parameters(), self.regul_actor_net.parameters(), self.tau)
+                polyak_update(self.policy.parameters(), self.regul_policy.parameters(), self.tau)
                 
             self._n_updates += 1
             if not continue_training:
@@ -201,6 +216,7 @@ class CustomPPO(PPO):
 
         # Logs
         self.logger.record("train/entropy_loss", np.mean(entropy_losses))
+        self.logger.record("train/old_entropy", np.mean(old_entropy))
         self.logger.record("train/policy_gradient_loss", np.mean(pg_losses))
         if self.use_advantage:
             self.logger.record("train/value_loss", np.mean(value_losses))
@@ -215,4 +231,102 @@ class CustomPPO(PPO):
         self.logger.record("train/clip_range", clip_range)
         if self.clip_range_vf is not None:
             self.logger.record("train/clip_range_vf", clip_range_vf)
+            
+    def collect_rollouts(
+        self,
+        env: VecEnv,
+        callback: BaseCallback,
+        rollout_buffer: RolloutBuffer,
+        n_rollout_steps: int,
+    ) -> bool:
+        """
+        Getting rollouts from regulization policy.
+        """
+        assert self._last_obs is not None, "No previous observation was provided"
+        # Switch to eval mode (this affects batch norm / dropout)
+        self.regul_policy.set_training_mode(False)
+
+        n_steps = 0
+        rollout_buffer.reset()
+        # Sample new weights for the state dependent exploration
+        if self.use_sde:
+            self.regul_policy.reset_noise(env.num_envs)
+
+        callback.on_rollout_start()
+
+        while n_steps < n_rollout_steps:
+            if self.use_sde and self.sde_sample_freq > 0 and n_steps % self.sde_sample_freq == 0:
+                # Sample a new noise matrix
+                self.pregul_olicy.reset_noise(env.num_envs)
+
+            with th.no_grad():
+                # Convert to pytorch tensor or to TensorDict
+                obs_tensor = obs_as_tensor(self._last_obs, self.device)
+                actions, values, log_probs = self.regul_policy(obs_tensor)
+            actions = actions.cpu().numpy()
+
+            # Rescale and perform action
+            clipped_actions = actions
+
+            if isinstance(self.action_space, spaces.Box):
+                if self.regul_policy.squash_output:
+                    # Unscale the actions to match env bounds
+                    # if they were previously squashed (scaled in [-1, 1])
+                    clipped_actions = self.regul_policy.unscale_action(clipped_actions)
+                else:
+                    # Otherwise, clip the actions to avoid out of bound error
+                    # as we are sampling from an unbounded Gaussian distribution
+                    clipped_actions = np.clip(actions, self.action_space.low, self.action_space.high)
+
+            new_obs, rewards, dones, infos = env.step(clipped_actions)
+
+            self.num_timesteps += env.num_envs
+
+            # Give access to local variables
+            callback.update_locals(locals())
+            if callback.on_step() is False:
+                return False
+
+            self._update_info_buffer(infos)
+            n_steps += 1
+
+            if isinstance(self.action_space, spaces.Discrete):
+                # Reshape in case of discrete action
+                actions = actions.reshape(-1, 1)
+
+            # Handle timeout by bootstraping with value function
+            # see GitHub issue #633
+            for idx, done in enumerate(dones):
+                if (
+                    done
+                    and infos[idx].get("terminal_observation") is not None
+                    and infos[idx].get("TimeLimit.truncated", False)
+                ):
+                    terminal_obs = self.regul_policy.obs_to_tensor(infos[idx]["terminal_observation"])[0]
+                    with th.no_grad():
+                        terminal_value = self.regul_policy.predict_values(terminal_obs)[0]  # type: ignore[arg-type]
+                    rewards[idx] += self.gamma * terminal_value
+
+            rollout_buffer.add(
+                self._last_obs,  # type: ignore[arg-type]
+                actions,
+                rewards,
+                self._last_episode_starts,  # type: ignore[arg-type]
+                values,
+                log_probs,
+            )
+            self._last_obs = new_obs  # type: ignore[assignment]
+            self._last_episode_starts = dones
+
+        with th.no_grad():
+            # Compute value for the last timestep
+            values = self.regul_policy.predict_values(obs_as_tensor(new_obs, self.device))  # type: ignore[arg-type]
+
+        rollout_buffer.compute_returns_and_advantage(last_values=values, dones=dones)
+
+        callback.update_locals(locals())
+
+        callback.on_rollout_end()
+
+        return True
 
