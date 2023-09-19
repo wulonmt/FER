@@ -18,7 +18,7 @@ from utils.CustomPPO import CustomPPO
 
 import flwr as fl
 from collections import OrderedDict
-from subprocess import Popen
+import subprocess
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-l", "--log_name", help="modified log name", type=str, default ="auto")
@@ -57,30 +57,27 @@ class HighwayClient(fl.client.NumPyClient):
                     verbose=1,
                     target_kl=0.1,
                     ent_coef=0.01,
-                    kl_coef=0.05,
+                    kl_coef=0.1,
                     vf_coef=0.8,
                     tensorboard_log=self.tensorboard_log,
                     use_advantage = True,
                     tau = 0.005,
                     )
-        time_str = Ptime()
-        time_str.set_time_now()
-        if args.log_name == "auto":
-            description = f"targetkl{self.model.target_kl:e}_entcoef{self.model.ent_coef:e}_klcoef{self.model.kl_coef:e}_vfcoef{self.model.vf_coef:e}_tau{self.model.tau:e}"
-        else:
-            description = args.log_name
-        self.log_name = time_str.get_time() + f"_{description}"
+
         self.n_round = int(0)
         
         if args.save_log == "True":
             time_str = Ptime()
             time_str.set_time_now()
-            self.log_name = time_str.get_time() + f"_{args.log_name}"
+            description = args.log_name if args.log_name != "auto" else \
+                        f"targetkl{self.model.target_kl:.1e}_entcoef{self.model.ent_coef:.1e}_klcoef{self.model.kl_coef:.1e}_vfcoef{self.model.vf_coef:.1e}_tau{self.model.tau:.1e}"
+            self.log_name = time_str.get_time() + f"_{description}"
             DIR = self.log_name
             MACHINE = "iris"
             ENV = args.environment + "_fed"
-            DESCRIPTION = f"targetkl{self.model.target_kl:e}_entcoef{self.model.ent_coef:e}_klcoef{self.model.kl_coef:e}_vfcoef{self.model.vf_coef:e}_tau{self.model.tau:e}"
-            print(Popen(["tb_dev.sh", DIR, MACHINE, ENV, DESCRIPTION], shell=True))
+            DESCRIPTION = description
+            #chmod +x your_script.sh
+            print(subprocess.check_call(["./tb_dev.sh", DIR, MACHINE, ENV, DESCRIPTION]))
         
         
     def get_parameters(self, config):
