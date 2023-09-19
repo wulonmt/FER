@@ -18,9 +18,10 @@ from utils.CustomPPO import CustomPPO
 
 import flwr as fl
 from collections import OrderedDict
+from subprocess import Popen
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-l", "--log_name", help="modified log name", type=str, nargs='?')
+parser.add_argument("-l", "--log_name", help="modified log name", type=str, default ="auto")
 parser.add_argument("-s", "--save_log", help="whether save log or not", type=str, default = "True") #parser can't pass bool
 parser.add_argument("-e", "--environment", help="which my- env been used", type=str, required = True)
 parser.add_argument("-t", "--train", help="training or not", type=str, default = "True")
@@ -56,7 +57,7 @@ class HighwayClient(fl.client.NumPyClient):
                     verbose=1,
                     target_kl=0.1,
                     ent_coef=0.01,
-                    kl_coef=0.01,
+                    kl_coef=0.05,
                     vf_coef=0.8,
                     tensorboard_log=self.tensorboard_log,
                     use_advantage = True,
@@ -64,8 +65,22 @@ class HighwayClient(fl.client.NumPyClient):
                     )
         time_str = Ptime()
         time_str.set_time_now()
-        self.log_name = time_str.get_time() + f"_{args.log_name}"
+        if args.log_name == "auto":
+            description = f"targetkl{self.model.target_kl:e}_entcoef{self.model.ent_coef:e}_klcoef{self.model.kl_coef:e}_vfcoef{self.model.vf_coef:e}_tau{self.model.tau:e}"
+        else:
+            description = args.log_name
+        self.log_name = time_str.get_time() + f"_{description}"
         self.n_round = int(0)
+        
+        if args.save_log == "True":
+            time_str = Ptime()
+            time_str.set_time_now()
+            self.log_name = time_str.get_time() + f"_{args.log_name}"
+            DIR = self.log_name
+            MACHINE = "iris"
+            ENV = args.environment + "_fed"
+            DESCRIPTION = f"targetkl{self.model.target_kl:e}_entcoef{self.model.ent_coef:e}_klcoef{self.model.kl_coef:e}_vfcoef{self.model.vf_coef:e}_tau{self.model.tau:e}"
+            print(Popen(["tb_dev.sh", DIR, MACHINE, ENV, DESCRIPTION], shell=True))
         
         
     def get_parameters(self, config):
@@ -104,7 +119,7 @@ class HighwayClient(fl.client.NumPyClient):
 def main():        
     # Start Flower client
     fl.client.start_numpy_client(
-        server_address="127.0.0.1:8080",
+        server_address="192.168.1.121:8080",
         client=HighwayClient(),
     )
 if __name__ == "__main__":

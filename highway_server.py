@@ -15,16 +15,17 @@ args = parser.parse_args()
 
 def main():
     total_rounds = 20
+    clients = 2
     # Decorated strategy
-    strategy = FedAvg(min_fit_clients=1,
-                      min_evaluate_clients=1,
-                      min_available_clients=1,
+    strategy = FedAvg(min_fit_clients=clients,
+                      min_evaluate_clients=clients,
+                      min_available_clients=clients,
                       )
 
                
     # Start Flower server
     fl.server.start_server(
-        server_address="127.0.0.1:8080",
+        server_address="192.168.1.121:8080",
         config=fl.server.ServerConfig(num_rounds=total_rounds),
         strategy=strategy,
     )
