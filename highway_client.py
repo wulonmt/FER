@@ -18,7 +18,6 @@ from utils.CustomPPO import CustomPPO
 
 import flwr as fl
 from collections import OrderedDict
-import subprocess
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-l", "--log_name", help="modified log name", type=str, default ="auto")
@@ -72,12 +71,6 @@ class HighwayClient(fl.client.NumPyClient):
             description = args.log_name if args.log_name != "auto" else \
                         f"targetkl{self.model.target_kl:.1e}_entcoef{self.model.ent_coef:.1e}_klcoef{self.model.kl_coef:.1e}_vfcoef{self.model.vf_coef:.1e}_tau{self.model.tau:.1e}"
             self.log_name = time_str.get_time() + f"_{description}"
-            DIR = self.log_name
-            MACHINE = "iris"
-            ENV = args.environment + "_fed"
-            DESCRIPTION = description
-            #chmod +x your_script.sh
-            print(subprocess.check_call(["./tb_dev.sh", DIR, MACHINE, ENV, DESCRIPTION]))
         
         
     def get_parameters(self, config):
