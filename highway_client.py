@@ -55,7 +55,7 @@ class HighwayClient(fl.client.NumPyClient):
                     gamma=0.8,
                     verbose=1,
                     target_kl=0.1,
-                    ent_coef=0.01,
+                    ent_coef=0.05,
                     kl_coef=0.1,
                     vf_coef=0.8,
                     tensorboard_log=self.tensorboard_log,
@@ -97,7 +97,7 @@ class HighwayClient(fl.client.NumPyClient):
         print("log name: ", self.tensorboard_log + self.log_name)
         # Save the agent
         if args.save_log:
-            self.model.save(self.tensorboard_log + "model")
+            self.model.save(self.tensorboard_log + self.log_name + "model")
             
         return self.get_parameters(config={}), self.model.num_timesteps, {}
 
