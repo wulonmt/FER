@@ -97,7 +97,7 @@ class HighwayClient(fl.client.NumPyClient):
         print("log name: ", self.tensorboard_log + self.log_name)
         # Save the agent
         if args.save_log:
-            self.model.save(self.tensorboard_log + self.log_name + "model")
+            self.model.save(self.tensorboard_log + self.log_name + "/model")
             
         return self.get_parameters(config={}), self.model.num_timesteps, {}
 
