@@ -11,7 +11,7 @@ parser.add_argument("-l", "--log_model", help="modle to be logged", type=str)
 args = parser.parse_args()
 ENV_LIST=["merge", "highway", "racetrack", "roundabout", "intersection",]
 RECORD = False
-SNAPSHOt = False
+SNAPSHOT = False
 
 if __name__ == "__main__":
     log_env = args.log_model.split('/')[0].split('_')[0]
@@ -46,10 +46,10 @@ if __name__ == "__main__":
     env.reset()
     
     if SNAPSHOT:
-    for _ in range(3):
-        obs, reward, done, truncated, info = env.step(env.action_type.actions_indexes["IDLE"])
+        for _ in range(3):
+            obs, reward, done, truncated, info = env.step(env.action_type.actions_indexes["IDLE"])
 
-        fig, axes = plt.subplots(ncols=4, figsize=(12, 5))
-        for i, ax in enumerate(axes.flat):
-            ax.imshow(obs[i, ...].T, cmap=plt.get_cmap('gray'))
-    plt.show()
+            fig, axes = plt.subplots(ncols=4, figsize=(12, 5))
+            for i, ax in enumerate(axes.flat):
+                ax.imshow(obs[i, ...].T, cmap=plt.get_cmap('gray'))
+        plt.show()
