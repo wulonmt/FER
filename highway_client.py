@@ -35,20 +35,18 @@ class HighwayClient(fl.client.NumPyClient):
         assert args.environment in ENV_LIST, "Wrong my-ENV"
         assert args.render_mode in "hr", "Wrong render mode"
         rm = "rgb_array" if args.render_mode == "r" else "human"
-        
-        self.env = gym.make(f"my-{args.environment}-v0", render_mode=rm)
 
-        n_cpu = 8
+        n_cpu = 6
         batch_size = 64
+        #self.env = gym.make(f"my-{args.environment}-v0", render_mode=rm)
+        self.env = make_vec_env(f"my-{args.environment}-v0", n_envs=n_cpu, vec_env_cls=SubprocVecEnv)
         self.tensorboard_log=f"{args.environment}_ppo/" if args.save_log == "True" else None
         trained_env = self.env
-        #trained_env = make_vec_env(self.env, n_envs=n_cpu, vec_env_cls=SubprocVecEnv)
-        #trained_env = make_vec_env(self.env, n_envs=n_cpu,)
-        #env = gym.make("highway-fast-v0", render_mode="human")
+        
         self.model = CustomPPO("CnnPolicy",
                     trained_env,
                     policy_kwargs=dict(net_arch=dict(pi=[256, 256], vf=[256, 256])),
-                    n_steps=batch_size * 16 // n_cpu,
+                    n_steps=batch_size * 12 // n_cpu,
                     batch_size=batch_size,
                     n_epochs=10,
                     learning_rate=5e-4,
@@ -71,6 +69,8 @@ class HighwayClient(fl.client.NumPyClient):
             description = args.log_name if args.log_name != "auto" else \
                         f"targetkl{self.model.target_kl:.1e}_entcoef{self.model.ent_coef:.1e}_klcoef{self.model.kl_coef:.1e}_vfcoef{self.model.vf_coef:.1e}_tau{self.model.tau:.1e}"
             self.log_name = time_str.get_time() + f"_{description}"
+        else:
+            self.log_name = None
         
         
     def get_parameters(self, config):
@@ -90,13 +90,13 @@ class HighwayClient(fl.client.NumPyClient):
             self.model.learning_rate = config["learning_rate"]
         print(f"Training learning rate: {self.model.learning_rate}")
         # Train the agent
-        self.model.learn(total_timesteps=int(2.5e4),
-                         tb_log_name=self.log_name + f"/round_{self.n_round}" if self.n_round>9 else self.log_name + f"/round_0{self.n_round}",
+        self.model.learn(total_timesteps=int(1e2),
+                         tb_log_name=(self.log_name + f"/round_{self.n_round}" if self.n_round>9 else self.log_name + f"/round_0{self.n_round}") if self.log_name is not None == "True" else None ,
                          reset_num_timesteps=False,
                          )
-        print("log name: ", self.tensorboard_log + self.log_name)
         # Save the agent
-        if args.save_log:
+        if args.save_log == "True":
+            print("log name: ", self.tensorboard_log + self.log_name)
             self.model.save(self.tensorboard_log + self.log_name + "/model")
             
         return self.get_parameters(config={}), self.model.num_timesteps, {}
@@ -109,7 +109,7 @@ class HighwayClient(fl.client.NumPyClient):
 def main():        
     # Start Flower client
     fl.client.start_numpy_client(
-        server_address="192.168.1.121:8080",
+        server_address="127.0.0.1:8080",
         client=HighwayClient(),
     )
 if __name__ == "__main__":
