@@ -107,7 +107,6 @@ class CustomPPO(PPO):
         entropy_losses = []
         pg_losses, value_losses = [], []
         clip_fractions = []
-        old_entropy = []
 
         continue_training = True
         # train for n_epochs epochs
@@ -125,10 +124,6 @@ class CustomPPO(PPO):
                     self.policy.reset_noise(self.batch_size)
 
                 values, log_prob, entropy = self.policy.evaluate_actions(rollout_data.observations, actions)
-                _, regul_log_prob, regul_entropy = self.regul_policy.evaluate_actions(rollout_data.observations, actions)
-                #print("policy training? ", self.policy.training)
-                #print("regul training? ", self.regul_policy.training)
-                old_entropy.append(th.mean(regul_entropy).item())
                 values = values.flatten()
                 #use advantages or returns
                 gradient_coefs = rollout_data.advantages if self.use_advantage else rollout_data.returns
@@ -182,10 +177,10 @@ class CustomPPO(PPO):
                 # and discussion in PR #419: https://github.com/DLR-RM/stable-baselines3/pull/419
                 # and Schulman blog: http://joschu.net/blog/kl-approx.html
                 #with th.no_grad():
-                #    log_ratio = log_prob - regul_log_prob
+                #    log_ratio = log_prob - rollout_data.old_log_prob
                 #    approx_kl_div = th.mean((th.exp(log_ratio) - 1) - log_ratio).cpu().numpy()
                 #    approx_kl_divs.append(approx_kl_div)
-                log_ratio = log_prob - regul_log_prob
+                log_ratio = log_prob - rollout_data.old_log_prob
                 approx_kl_div = th.mean((th.exp(log_ratio) - 1) - log_ratio)
                 approx_kl_divs.append(approx_kl_div.detach().cpu().numpy())
                 
@@ -218,7 +213,6 @@ class CustomPPO(PPO):
 
         # Logs
         self.logger.record("train/entropy_loss", np.mean(entropy_losses))
-        self.logger.record("train/old_entropy", np.mean(old_entropy))
         self.logger.record("train/policy_gradient_loss", np.mean(pg_losses))
         if self.use_advantage:
             self.logger.record("train/value_loss", np.mean(value_losses))
