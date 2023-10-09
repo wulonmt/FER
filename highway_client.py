@@ -54,7 +54,7 @@ class HighwayClient(fl.client.NumPyClient):
                     verbose=1,
                     target_kl=0.1,
                     ent_coef=0,
-                    kl_coef=0.1,
+                    kl_coef=0.2,
                     vf_coef=0.8,
                     tensorboard_log=self.tensorboard_log,
                     use_advantage = True,
@@ -90,7 +90,7 @@ class HighwayClient(fl.client.NumPyClient):
             self.model.learning_rate = config["learning_rate"]
         print(f"Training learning rate: {self.model.learning_rate}")
         # Train the agent
-        self.model.learn(total_timesteps=int(1e2),
+        self.model.learn(total_timesteps=int(2.5e4),
                          tb_log_name=(self.log_name + f"/round_{self.n_round}" if self.n_round>9 else self.log_name + f"/round_0{self.n_round}") if self.log_name is not None == "True" else None ,
                          reset_num_timesteps=False,
                          )
