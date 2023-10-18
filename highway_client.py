@@ -52,9 +52,9 @@ class HighwayClient(fl.client.NumPyClient):
                     learning_rate=5e-4,
                     gamma=0.8,
                     verbose=1,
-                    target_kl=0.1,
-                    ent_coef=0,
-                    kl_coef=0.2,
+                    target_kl=0.3,
+                    ent_coef=0.,
+                    kl_coef=0.1,
                     vf_coef=0.8,
                     tensorboard_log=self.tensorboard_log,
                     use_advantage = True,
@@ -91,7 +91,7 @@ class HighwayClient(fl.client.NumPyClient):
         print(f"Training learning rate: {self.model.learning_rate}")
         # Train the agent
         self.model.learn(total_timesteps=int(2.5e4),
-                         tb_log_name=(self.log_name + f"/round_{self.n_round}" if self.n_round>9 else self.log_name + f"/round_0{self.n_round}") if self.log_name is not None == "True" else None ,
+                         tb_log_name=(self.log_name + f"/round_{self.n_round}" if self.n_round>9 else self.log_name + f"/round_0{self.n_round}") if self.log_name is not None else None ,
                          reset_num_timesteps=False,
                          )
         # Save the agent
@@ -109,7 +109,7 @@ class HighwayClient(fl.client.NumPyClient):
 def main():        
     # Start Flower client
     fl.client.start_numpy_client(
-        server_address="127.0.0.1:8080",
+        server_address="192.168.1.121:8080",
         client=HighwayClient(),
     )
 if __name__ == "__main__":

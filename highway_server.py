@@ -16,22 +16,22 @@ parser.add_argument("-m", "--model_name", help="modified model name", type=str, 
 args = parser.parse_args()
 
 def main():
-    total_rounds = 3
-    clients = 1
+    total_rounds = 40
+    clients = 2
     # Decorated strategy
     strategy = FedAvg(min_fit_clients=clients,
                       min_evaluate_clients=clients,
                       min_available_clients=clients,
                       )
 
-    #send_line('Starting experiment')
+    send_line('Starting experiment')
     # Start Flower server
     fl.server.start_server(
-        server_address="127.0.0.1:8080",
+        server_address="192.168.1.121:8080",
         config=fl.server.ServerConfig(num_rounds=total_rounds),
         strategy=strategy,
     )
-    #send_line('Experiment done !!!!!')
+    send_line('Experiment done !!!!!')
     
 def send_line(message:str):
     token = '7ZPjzeQrRcI70yDFnhBd4A6xpU8MddE7MntCSdbLBgC'
