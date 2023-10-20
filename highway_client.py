@@ -54,7 +54,7 @@ class HighwayClient(fl.client.NumPyClient):
                     verbose=1,
                     target_kl=0.3,
                     ent_coef=0.,
-                    kl_coef=0.1,
+                    kl_coef=0.3,
                     vf_coef=0.8,
                     tensorboard_log=self.tensorboard_log,
                     use_advantage = True,
@@ -67,7 +67,7 @@ class HighwayClient(fl.client.NumPyClient):
             time_str = Ptime()
             time_str.set_time_now()
             description = args.log_name if args.log_name != "auto" else \
-                        f"targetkl{self.model.target_kl:.1e}_entcoef{self.model.ent_coef:.1e}_klcoef{self.model.kl_coef:.1e}_vfcoef{self.model.vf_coef:.1e}_tau{self.model.tau:.1e}"
+                        f"Peak_targetkl{self.model.target_kl:.1e}_entcoef{self.model.ent_coef:.1e}_klcoef{self.model.kl_coef:.1e}_vfcoef{self.model.vf_coef:.1e}_tau{self.model.tau:.1e}"
             self.log_name = time_str.get_time() + f"_{description}"
         else:
             self.log_name = None
