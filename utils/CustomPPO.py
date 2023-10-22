@@ -169,7 +169,7 @@ class CustomPPO(PPO):
 
                 entropy_losses.append(entropy_loss.item())
                 
-                old_entropy.append(-rollout_data.old_log_prob)
+                old_entropy.append(-rollout_data.old_log_prob.detatch().cpu().numpy())
 
                 loss = policy_loss + self.ent_coef * entropy_loss
                 if self.use_advantage:
