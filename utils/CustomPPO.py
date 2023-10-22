@@ -107,6 +107,7 @@ class CustomPPO(PPO):
         entropy_losses = []
         pg_losses, value_losses = [], []
         clip_fractions = []
+        old_entropy = []
 
         continue_training = True
         # train for n_epochs epochs
@@ -167,6 +168,8 @@ class CustomPPO(PPO):
                     entropy_loss = -th.mean(entropy)
 
                 entropy_losses.append(entropy_loss.item())
+                
+                old_entropy.append(-rollout_data.old_log_prob)
 
                 loss = policy_loss + self.ent_coef * entropy_loss
                 if self.use_advantage:
@@ -218,6 +221,7 @@ class CustomPPO(PPO):
 
         # Logs
         self.logger.record("train/entropy_loss", np.mean(entropy_losses))
+        self.logger.record("train/old_entropy", np.mean(old_entropy))
         self.logger.record("train/policy_gradient_loss", np.mean(pg_losses))
         if self.use_advantage:
             self.logger.record("train/value_loss", np.mean(value_losses))
