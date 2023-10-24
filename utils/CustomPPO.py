@@ -169,7 +169,7 @@ class CustomPPO(PPO):
 
                 entropy_losses.append(entropy_loss.item())
                 
-                old_entropy.append(-rollout_data.old_log_prob.detatch().cpu().numpy())
+                old_entropy.append(-rollout_data.old_log_prob.detach().cpu().numpy())
 
                 loss = policy_loss + self.ent_coef * entropy_loss
                 if self.use_advantage:
@@ -183,7 +183,7 @@ class CustomPPO(PPO):
                 #    log_ratio = log_prob - rollout_data.old_log_prob
                 #    approx_kl_div = th.mean((th.exp(log_ratio) - 1) - log_ratio).cpu().numpy()
                 #    approx_kl_divs.append(approx_kl_div)
-                log_ratio = log_prob - rollout_data.old_log_prob
+                log_ratio = log_prob - rollout_data.old_log_prob.detach()
                 approx_kl_div = th.mean((th.exp(log_ratio) - 1) - log_ratio)
                 approx_kl_divs.append(approx_kl_div.detach().cpu().numpy())
                 
