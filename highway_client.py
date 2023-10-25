@@ -54,7 +54,7 @@ class HighwayClient(fl.client.NumPyClient):
                     verbose=1,
                     target_kl=0.3,
                     ent_coef=0.,
-                    kl_coef=0.1,
+                    kl_coef=0.3,
                     vf_coef=0.8,
                     tensorboard_log=self.tensorboard_log,
                     use_advantage = True,
