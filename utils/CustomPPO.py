@@ -186,7 +186,7 @@ class CustomPPO(PPO):
                 #    approx_kl_divs.append(approx_kl_div)
                 log_ratio = log_prob - rollout_data.old_log_prob.detach()
                 #approx_kl_div = th.mean((th.exp(log_ratio) - 1) - log_ratio)
-                approx_kl_div = -th.exp(rollout_data.old_log_prob.detach())*log_ratio
+                approx_kl_div = -th.mean(th.exp(rollout_data.old_log_prob.detach())*log_ratio)
                 approx_kl_divs.append(approx_kl_div.detach().cpu().numpy())
                 
                 #Cut the kl_div if larger than kl_target
