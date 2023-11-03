@@ -4,7 +4,6 @@ import time
 class Ptime():
     def __init__(self):
         self.saved_time = ""
-        self.ptime = ""
         self.month_number_dict = {
         'Jan': '01',
         'Feb': '02',
@@ -33,12 +32,17 @@ class Ptime():
             time_list[2] = "0" + time_list[2]
         time_list[1] = self.month_number_dict[time_list[1]]
         mask = [4, 1, 2, 3]
-        self.ptime = ""
+        ptime = ""
         for i in mask:
-            self.ptime += time_list[i]
-        return self.ptime
+            ptime += time_list[i]
+        return ptime
+        
+    def get_time_to_hour(self):
+        hour_time = self.get_time()[:-6]
+        return hour_time
         
 if __name__ == "__main__":
     t = Ptime()
     t.set_time_now()
-    print("time now:: ", t.get_time())
+    print("time now: ", t.get_time())
+    print("time to hour now: ", t.get_time_to_hour())

@@ -18,6 +18,7 @@ from utils.CustomPPO import CustomPPO
 
 import flwr as fl
 from collections import OrderedDict
+import os
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-l", "--log_name", help="modified log name", type=str, default ="auto")
@@ -25,18 +26,19 @@ parser.add_argument("-s", "--save_log", help="whether save log or not", type=str
 parser.add_argument("-e", "--environment", help="which my- env been used", type=str, required = True)
 parser.add_argument("-t", "--train", help="training or not", type=str, default = "True")
 parser.add_argument("-r", "--render_mode", help="h for human & r for rgb_array", type=str, default = "r")
+parser.add_argument("-i", "--index", help="client index", type=int, default = 0, required = True)
 args = parser.parse_args()
 ENV_LIST=["merge", "highway", "racetrack", "roundabout", "intersection",]
 
 
 class HighwayClient(fl.client.NumPyClient):
-    def __init__(self):
+    def __init__(self, client_index):
         
         assert args.environment in ENV_LIST, "Wrong my-ENV"
         assert args.render_mode in "hr", "Wrong render mode"
         rm = "rgb_array" if args.render_mode == "r" else "human"
 
-        n_cpu = 6
+        n_cpu = 2
         batch_size = 64
         #self.env = gym.make(f"my-{args.environment}-v0", render_mode=rm)
         self.env = make_vec_env(f"my-{args.environment}-v0", n_envs=n_cpu, vec_env_cls=SubprocVecEnv)
@@ -46,7 +48,7 @@ class HighwayClient(fl.client.NumPyClient):
         self.model = CustomPPO("CnnPolicy",
                     trained_env,
                     policy_kwargs=dict(net_arch=dict(pi=[256, 256], vf=[256, 256])),
-                    n_steps=batch_size * 12 // n_cpu,
+                    n_steps=batch_size * 2 * n_cpu // n_cpu,
                     batch_size=batch_size,
                     n_epochs=10,
                     learning_rate=5e-4,
@@ -66,9 +68,13 @@ class HighwayClient(fl.client.NumPyClient):
         if args.save_log == "True":
             time_str = Ptime()
             time_str.set_time_now()
+            folder_name = self.tensorboard_log + time_str.get_time_to_hour()
+            if not os.path.exists(folder_name):
+                os.makedirs(folder_name)
+                print(f"Folder '{folder_name}' created.")
             description = args.log_name if args.log_name != "auto" else \
-                        f"Peak_targetkl{self.model.target_kl:.1e}_entcoef{self.model.ent_coef:.1e}_klcoef{self.model.kl_coef:.1e}_vfcoef{self.model.vf_coef:.1e}_tau{self.model.tau:.1e}"
-            self.log_name = time_str.get_time() + f"_{description}"
+                        f"multiagent_targetkl{self.model.target_kl:.1e}_entcoef{self.model.ent_coef:.1e}_klcoef{self.model.kl_coef:.1e}_vfcoef{self.model.vf_coef:.1e}_tau{self.model.tau:.1e}"
+            self.log_name = folder_name + f"/_{client_index}_{description}"
         else:
             self.log_name = None
         
@@ -108,9 +114,10 @@ class HighwayClient(fl.client.NumPyClient):
 
 def main():        
     # Start Flower client
+    #port = 8080 + args.index
     fl.client.start_numpy_client(
-        server_address="192.168.1.121:8080",
-        client=HighwayClient(),
+        server_address=f"192.168.1.121:8080",
+        client=HighwayClient(args.index),
     )
 if __name__ == "__main__":
     main()
