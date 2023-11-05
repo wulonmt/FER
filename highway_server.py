@@ -27,7 +27,7 @@ def main():
     send_line('Starting experiment')
     # Start Flower server
     fl.server.start_server(
-        server_address="192.168.1.121:8080",
+        server_address="127.0.0.1:8080",
         config=fl.server.ServerConfig(num_rounds=total_rounds),
         strategy=strategy,
     )

@@ -43,12 +43,18 @@ class HighwayClient(fl.client.NumPyClient):
         #self.env = gym.make(f"my-{args.environment}-v0", render_mode=rm)
         self.env = make_vec_env(f"my-{args.environment}-v0", n_envs=n_cpu, vec_env_cls=SubprocVecEnv)
         self.tensorboard_log=f"{args.environment}_ppo/" if args.save_log == "True" else None
+        time_str = Ptime()
+        time_str.set_time_now()
+        self.tensorboard_log = self.tensorboard_log + time_str.get_time_to_hour() + "/"
+        if not os.path.exists(self.tensorboard_log):
+            os.makedirs(self.tensorboard_log)
+            print(f"Folder '{self.tensorboard_log}' created.")
         trained_env = self.env
         
         self.model = CustomPPO("CnnPolicy",
                     trained_env,
                     policy_kwargs=dict(net_arch=dict(pi=[256, 256], vf=[256, 256])),
-                    n_steps=batch_size * 2 * n_cpu // n_cpu,
+                    n_steps=batch_size * 12 // n_cpu,
                     batch_size=batch_size,
                     n_epochs=10,
                     learning_rate=5e-4,
@@ -66,15 +72,9 @@ class HighwayClient(fl.client.NumPyClient):
         self.n_round = int(0)
         
         if args.save_log == "True":
-            time_str = Ptime()
-            time_str.set_time_now()
-            folder_name = self.tensorboard_log + time_str.get_time_to_hour()
-            if not os.path.exists(folder_name):
-                os.makedirs(folder_name)
-                print(f"Folder '{folder_name}' created.")
             description = args.log_name if args.log_name != "auto" else \
                         f"multiagent_targetkl{self.model.target_kl:.1e}_entcoef{self.model.ent_coef:.1e}_klcoef{self.model.kl_coef:.1e}_vfcoef{self.model.vf_coef:.1e}_tau{self.model.tau:.1e}"
-            self.log_name = folder_name + f"/_{client_index}_{description}"
+            self.log_name = f"{client_index}_{description}"
         else:
             self.log_name = None
         
@@ -116,7 +116,7 @@ def main():
     # Start Flower client
     #port = 8080 + args.index
     fl.client.start_numpy_client(
-        server_address=f"192.168.1.121:8080",
+        server_address=f"127.0.0.1:8080",
         client=HighwayClient(args.index),
     )
 if __name__ == "__main__":
