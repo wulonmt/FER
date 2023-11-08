@@ -28,7 +28,7 @@ parser.add_argument("-t", "--train", help="training or not", type=str, default =
 parser.add_argument("-r", "--render_mode", help="h for human & r for rgb_array", type=str, default = "r")
 parser.add_argument("-i", "--index", help="client index", type=int, default = 0, required = True)
 args = parser.parse_args()
-ENV_LIST=["merge", "highway", "racetrack", "roundabout", "intersection",]
+ENV_LIST=["merge", "highway", "racetrack", "roundabout", "intersection", "crowded_highway", "crowded_merge",]
 
 
 class HighwayClient(fl.client.NumPyClient):
@@ -54,15 +54,15 @@ class HighwayClient(fl.client.NumPyClient):
         self.model = CustomPPO("CnnPolicy",
                     trained_env,
                     policy_kwargs=dict(net_arch=dict(pi=[256, 256], vf=[256, 256])),
-                    n_steps=batch_size * 12 // n_cpu,
+                    n_steps=batch_size * 4 // n_cpu,
                     batch_size=batch_size,
                     n_epochs=10,
                     learning_rate=5e-4,
                     gamma=0.8,
                     verbose=1,
-                    target_kl=0.1,
-                    ent_coef=0.01,
-                    kl_coef=0.,
+                    target_kl=0.3,
+                    ent_coef=0.,
+                    kl_coef=0.3,
                     vf_coef=0.8,
                     tensorboard_log=self.tensorboard_log,
                     use_advantage = True,

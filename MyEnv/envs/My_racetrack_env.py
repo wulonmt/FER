@@ -28,7 +28,7 @@ class MyRacetrackEnv(RacetrackEnv):
                 "type": "DiscreteMetaAction",
                 "target_speeds": [0, 8, 16],
                         },
-            "collision_reward": -5,
+            "collision_reward": -1,
             "right_lane_reward": 0,
             "high_speed_reward": 0.4,
             "merging_speed_reward": -0.5,
@@ -37,7 +37,7 @@ class MyRacetrackEnv(RacetrackEnv):
             "screen_height": 1000,
             "other_vehicles": 4,
             "duration": 50,
-            "takeover_reward": 10,
+            "takeover_reward": 1,
             })
         return cfg
 
