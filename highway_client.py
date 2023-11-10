@@ -45,10 +45,8 @@ class HighwayClient(fl.client.NumPyClient):
         self.tensorboard_log=f"{args.environment}_ppo/" if args.save_log == "True" else None
         time_str = Ptime()
         time_str.set_time_now()
-        self.tensorboard_log = self.tensorboard_log + time_str.get_time_to_hour() + "/"
-        if not os.path.exists(self.tensorboard_log):
-            os.makedirs(self.tensorboard_log)
-            print(f"Folder '{self.tensorboard_log}' created.")
+        if args.save_log == "True":
+            self.tensorboard_log = "multiagent/" + time_str.get_time_to_hour() + "/" + self.tensorboard_log
         trained_env = self.env
         
         self.model = CustomPPO("CnnPolicy",
