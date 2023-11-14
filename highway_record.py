@@ -7,14 +7,15 @@ from stable_baselines3 import PPO
 from gymnasium.wrappers import RecordVideo
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-l", "--log_model", help="modle to be logged", type=str)
+parser.add_argument("-l", "--log_model", help="model to be logged", type=str)
+parser.add_argument("-e", "--env", help="my-env to be evaluate", type=str)
 args = parser.parse_args()
-ENV_LIST=["merge", "highway", "racetrack", "roundabout", "intersection",]
+ENV_LIST=["merge", "highway", "racetrack", "roundabout", "intersection", "crowded_highway", "crowded_merge",]
 RECORD = False
 SNAPSHOT = False
 
 if __name__ == "__main__":
-    log_env = args.log_model.split('/')[0].split('_')[0]
+    log_env = args.env
     assert log_env in ENV_LIST, "Wrong my-ENV"
     env = gym.make(f"my-{log_env}-v0", render_mode="rgb_array")
     env.reset()
