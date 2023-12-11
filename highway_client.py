@@ -58,13 +58,13 @@ class HighwayClient(fl.client.NumPyClient):
                     learning_rate=5e-4,
                     gamma=0.8,
                     verbose=1,
-                    target_kl=0.3,
+                    target_kl=0.2,
                     ent_coef=0.,
-                    kl_coef=0.3,
+                    kl_coef=0.0,
                     vf_coef=0.8,
                     tensorboard_log=self.tensorboard_log,
                     use_advantage = True,
-                    tau = 0.005,
+                    tau = 0.05,
                     )
 
         self.n_round = int(0)
