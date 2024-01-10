@@ -4,7 +4,8 @@ echo "Starting server"
 python highway_server.py &
 sleep 3  # Sleep for 3s to give the server enough time to start
 
-env_list=("highway" "crowded_highway" "merge" "crowded_merge")
+#env_list=("highway" "crowded_highway" "merge" "crowded_merge")
+env_list=("crowded_highway" "crowded_highway" "crowded_highway" "crowded_highway")
 
 for ((i = 0; i < ${#env_list[@]}; i++))
 do
